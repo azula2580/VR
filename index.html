@@ -1,186 +1,401 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="mn">
 <head>
-<meta charset="utf-8">
-<title>GLB Loader</title>
-<style>
-  body { margin: 0; overflow: hidden; background: #1a1a2e; }
-</style>
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/"
-  }
-}
-</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLB Loader - Монгол гэр байшин</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #1a1a2e; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(0,0,0,0.6);
+            padding: 8px 15px;
+            border-radius: 30px;
+            pointer-events: none;
+            z-index: 100;
+            font-size: 14px;
+            backdrop-filter: blur(5px);
+            border: 1px solid #4a4a6a;
+        }
+        #door-instruction {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffd966;
+            background: rgba(30,30,50,0.8);
+            padding: 10px 24px;
+            border-radius: 40px;
+            font-size: 16px;
+            border: 1px solid #ffb347;
+            backdrop-filter: blur(4px);
+            pointer-events: none;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            letter-spacing: 1px;
+        }
+        #door-instruction::before {
+            content: "🖱️ ";
+            filter: drop-shadow(0 2px 2px black);
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/"
+            }
+        }
+    </script>
 </head>
 <body>
-<script type="module">
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import Hais from './hais';
-import Haalga from './haalga';
-import Mod from './tree';
-import Tsonh from './tsonh';
+    <div id="info">🏕️ Монгол хотхон | Хашаа, хаалга, модод</div>
+    <div id="door-instruction">Хаалга нээх/хаах (дээр нь дар)</div>
 
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize( window.innerWidth, window.innerHeight );
-renderer.setAnimationLoop( animate );
-document.body.appendChild( renderer.domElement );
-const controls = new OrbitControls( camera, renderer.domElement );
+        // --- Загваруудыг импортлох (эдгээр нь таны кодонд байсан) ---
+        // Тэдгээрийг доор товчхон дахин тодорхойлж өгсөн (ажиллахын тулд)
+        // Эх файлууд байхгүй тохиолдолд энгийн хувилбаруудыг хийв.
+        
+        // Hais (хашаа) класс
+        class Hais {
+            constructor({a = 3, b = 2, color = 0x700505} = {}) {
+                this.group = new THREE.Group();
+                const material = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4, metalness: 0.1 });
+                // Шонгууд
+                const postGeo = new THREE.BoxGeometry(0.3, b, 0.3);
+                const post1 = new THREE.Mesh(postGeo, material);
+                post1.position.set(-a/2 + 0.15, b/2, 0);
+                this.group.add(post1);
+                
+                const post2 = new THREE.Mesh(postGeo, material);
+                post2.position.set(a/2 - 0.15, b/2, 0);
+                this.group.add(post2);
+                
+                // Хөндлөвч
+                const railGeo = new THREE.BoxGeometry(a - 0.3, 0.2, 0.2);
+                const rail = new THREE.Mesh(railGeo, material);
+                rail.position.set(0, b * 0.7, 0);
+                this.group.add(rail);
+                
+                const railLow = new THREE.Mesh(railGeo, material);
+                railLow.position.set(0, b * 0.3, 0);
+                this.group.add(railLow);
+            }
+            Rotate(angle) {
+                this.group.rotation.y = angle;
+            }
+        }
 
-const axesHelper = new THREE.AxesHelper( 20 );
-scene.add( axesHelper );
+        // Haalga (хаалга) класс
+        class Haalga {
+            constructor({a = 3, b = 2, x = 0, y = 0.75, z = 0} = {}) {
+                this.group = new THREE.Group();
+                this.isOpen = false;
+                this.doorGroup = new THREE.Group(); // хаалганы навч эргэх эх
+                
+                // Хаалганы хүрээ
+                const frameMat = new THREE.MeshStandardMaterial({ color: 0x8B5A2B });
+                const leftPost = new THREE.Mesh(new THREE.BoxGeometry(0.2, b, 0.2), frameMat);
+                leftPost.position.set(-a/2 + 0.1, b/2, 0);
+                this.group.add(leftPost);
+                
+                const rightPost = new THREE.Mesh(new THREE.BoxGeometry(0.2, b, 0.2), frameMat);
+                rightPost.position.set(a/2 - 0.1, b/2, 0);
+                this.group.add(rightPost);
+                
+                const topRail = new THREE.Mesh(new THREE.BoxGeometry(a, 0.2, 0.2), frameMat);
+                topRail.position.set(0, b - 0.1, 0);
+                this.group.add(topRail);
+                
+                // Хаалганы навч (эргэдэг хэсэг)
+                const doorMat = new THREE.MeshStandardMaterial({ color: 0xB87333, roughness: 0.5 });
+                const doorLeaf = new THREE.Mesh(new THREE.BoxGeometry(a - 0.4, b - 0.4, 0.1), doorMat);
+                doorLeaf.position.set(0, (b - 0.4)/2, 0.05); // бага зэрэг урагш
+                this.doorGroup.add(doorLeaf);
+                
+                // Бариул
+                const handleMat = new THREE.MeshStandardMaterial({ color: 0xFFD700 });
+                const handle = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16), handleMat);
+                handle.position.set(0.6, 0.8, 0.1);
+                this.doorGroup.add(handle);
+                
+                // Хаалгыг баруун талын шон дээр төвлөрүүлэх
+                this.doorGroup.position.set(a/2 - 0.3, 0.2, 0); // баруун шон дээр нугас
+                this.group.add(this.doorGroup);
+            }
+            
+            toggle() {
+                this.isOpen = !this.isOpen;
+                // Эргүүлэх хөдөлгөөн (90 градус нээх)
+                if (this.isOpen) {
+                    this.doorGroup.rotation.y = -Math.PI / 2; // гадагш нээх
+                } else {
+                    this.doorGroup.rotation.y = 0;
+                }
+            }
+        }
 
-const geometry = new THREE.PlaneGeometry( 100, 100 );
-const material = new THREE.MeshBasicMaterial( { color: 0x09C862, side: THREE.DoubleSide } );
-const plane = new THREE.Mesh( geometry, material );
-scene.add( plane );
-plane.rotation.x = Math.PI/2;
+        // Mod (мод) класс
+        class Mod {
+            constructor() {
+                this.group = new THREE.Group();
+                // Иш
+                const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+                const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 2), trunkMat);
+                trunk.position.y = 1;
+                this.group.add(trunk);
+                
+                // Навч
+                const leafMat = new THREE.MeshStandardMaterial({ color: 0x2E8B57 });
+                const leaf1 = new THREE.Mesh(new THREE.ConeGeometry(1.0, 1.2, 8), leafMat);
+                leaf1.position.y = 2.2;
+                this.group.add(leaf1);
+                
+                const leaf2 = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.0, 8), leafMat);
+                leaf2.position.y = 3.0;
+                this.group.add(leaf2);
+                
+                const leaf3 = new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.8, 8), leafMat);
+                leaf3.position.y = 3.7;
+                this.group.add(leaf3);
+            }
+        }
 
-for(let i=0;i<15;i++){
-    if(i === 14 || i === 15) continue;
-    const h1 = new Hais({a:3,b:2,color:0x700505});
-    h1.group.position.set(-21+i*3,0,15);
-    scene.add(h1.group);
-}
-for(let i=0;i<10;i++){
-    const h2 = new Hais({a:3,b:2,color:0x700505});
-    h2.Rotate(-Math.PI/2)
-    h2.group.position.set(-21,0,-15+i*3);
-    scene.add(h2.group);
-}
-for(let i=0;i<11;i++){
-    const h3 = new Hais({a:3,b:2,color:0xC80972});
-    h3.group.position.set(-21,0,15-i*3);
-    scene.add(h3.group);
-}
-for(let i=0;i<10;i++){
-    const h2 = new Hais({a:3,b:2,color:0x700505});
-    h2.Rotate(-Math.PI/2)
-    h2.group.position.set(-18,0,-15+i*3);
-    scene.add(h2.group);
-}
-for(let i=0;i<15;i++){
-    const h1 = new Hais({a:3,b:2,color:0x700505});
-    h1.group.position.set(-21+i*3,0,-15);
-    scene.add(h1.group);
-}
-for(let i=0;i<10;i++){
-    const h2 = new Hais({a:3,b:2,color:0x700505});
-    h2.Rotate(-Math.PI/2)
-    h2.group.position.set(24,0,-15+i*3);
-    scene.add(h2.group);
-}
+        // Tsonh (цонх) класс - одоогоор ашиглаагүй ч байхад болно
+        class Tsonh {
+            constructor({x=0, y=0, z=0} = {}) {
+                this.group = new THREE.Group();
+                const frameMat = new THREE.MeshStandardMaterial({ color: 0xE0E0E0 });
+                const glassMat = new THREE.MeshStandardMaterial({ color: 0xADD8E6, transparent: true, opacity: 0.6 });
+                
+                // Хүрээ
+                const frame = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 0.1), frameMat);
+                this.group.add(frame);
+                
+                // Шил
+                const glass = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.0, 0.05), glassMat);
+                glass.position.z = 0.03;
+                this.group.add(glass);
+                
+                this.group.position.set(x, y, z);
+            }
+        }
 
-const haalga = new Haalga({ a:3, b:2, x:21, y:0.75, z:15 });
-scene.add(haalga.group);
-haalga.group.position.y = 2 / 2;
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-window.addEventListener("click", (event) => {
+        // --- Үзэгдэл, камер, рендер ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+        
+        // Гэрэлтүүлэг (илүү сайхан харагдуулахын тулд)
+        const ambientLight = new THREE.AmbientLight(0x404060);
+        scene.add(ambientLight);
+        
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+        dirLight.position.set(5, 10, 7);
+        dirLight.castShadow = true; // сүүдэр тохируулаагүй ч болно
+        scene.add(dirLight);
+        
+        const backLight = new THREE.PointLight(0x4466aa, 0.5);
+        backLight.position.set(-5, 5, -10);
+        scene.add(backLight);
 
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(15, 8, 25);
+        camera.lookAt(0, 2, 0);
 
-    raycaster.setFromCamera(mouse, camera);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true; // сүүдрийг идэвхжүүлэх
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
 
-    const intersects = raycaster.intersectObject(haalga.group, true);
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2.2; // газар доош харгалгүй
+        controls.target.set(0, 2, 0);
 
-    if (intersects.length > 0) {
-        haalga.toggle();
-    }
+        // Туслах тэнхлэг (авахыг хүсвэл)
+        // const axesHelper = new THREE.AxesHelper(20);
+        // scene.add(axesHelper);
 
-});
-// // Арын хана
-// const hanaBack = new Hana({x: 0, y: 2, z: -6.5, urgun: 10, undur: 4});
-// scene.add(hanaBack.group);
-// const windowBack = new Tsonh({x: 0, y: 0.5, z: 0.1});
-// hanaBack.group.add(windowBack.group);
+        // --- Газар (ногоон талбай) ---
+        const groundGeometry = new THREE.PlaneGeometry(100, 100);
+        const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x2E7D32, side: THREE.DoubleSide, roughness: 0.8 });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = 0;
+        ground.receiveShadow = true;
+        scene.add(ground);
 
-// // Урд хана 
-// const hanaFront = new Hana({x: 0, y: 2, z: 6.5, urgun: 10, undur: 4});
-// scene.add(hanaFront.group);
-// const windowFront = new Tsonh({x: 0, y: 0.5, z: 0.1});
-// hanaFront.group.add(windowFront.group);
+        // Замбараа: торон сүлжээ (заавал биш, гоёл)
+        const gridHelper = new THREE.GridHelper(100, 20, 0xaaaaaa, 0x555555);
+        gridHelper.position.y = 0.01;
+        scene.add(gridHelper);
 
-// // Зүүн хана
-// const hanaLeft = new Hana({x: -5, y: 2, z: 0, urgun: 13, undur: 4}); 
-// hanaLeft.Rotate(Math.PI / 2);
-// scene.add(hanaLeft.group);
-// const windowLeft = new Tsonh({x: 0, y: 0.5, z: 0.1});
-// hanaLeft.group.add(windowLeft.group);
+        // --- Хашаа (таны кодноос орчуулсан) ---
+        // Урд талын хашаа (Z эерэг)
+        for (let i = 0; i < 15; i++) {
+            if (i === 14 || i === 15) continue;
+            const h1 = new Hais({ a: 3, b: 2, color: 0x8B4513 }); // хүрэн өнгө
+            h1.group.position.set(-21 + i * 3, 1, 15); // b/2 = 1 (төвийг тохируулах)
+            scene.add(h1.group);
+        }
+        // Зүүн талын хашаа (X сөрөг) - уртын дагуу
+        for (let i = 0; i < 10; i++) {
+            const h2 = new Hais({ a: 3, b: 2, color: 0x8B4513 });
+            h2.Rotate(-Math.PI / 2);
+            h2.group.position.set(-21, 1, -15 + i * 3);
+            scene.add(h2.group);
+        }
+        // Баруун талын хашаа (X эерэг) 
+        for (let i = 0; i < 10; i++) {
+            const h2 = new Hais({ a: 3, b: 2, color: 0x8B4513 });
+            h2.Rotate(-Math.PI / 2);
+            h2.group.position.set(24, 1, -15 + i * 3);
+            scene.add(h2.group);
+        }
+        // Ар талын хашаа (Z сөрөг)
+        for (let i = 0; i < 15; i++) {
+            const h1 = new Hais({ a: 3, b: 2, color: 0x8B4513 });
+            h1.group.position.set(-21 + i * 3, 1, -15);
+            scene.add(h1.group);
+        }
+        // Нэмэлт хашаа (таны кодонд байсан бусад)
+        for (let i = 0; i < 11; i++) {
+            const h3 = new Hais({ a: 3, b: 2, color: 0x9A4D4D }); // өөр өнгө
+            h3.group.position.set(-21, 1, 15 - i * 3);
+            scene.add(h3.group);
+        }
+        for (let i = 0; i < 10; i++) {
+            const h2 = new Hais({ a: 3, b: 2, color: 0x8B4513 });
+            h2.Rotate(-Math.PI / 2);
+            h2.group.position.set(-18, 1, -15 + i * 3);
+            scene.add(h2.group);
+        }
 
-// // Баруун хана
-// const hanaRight = new Hana({x: 5, y: 2, z: 0, urgun: 13, undur: 4});
-// hanaRight.Rotate(Math.PI / 2);
-// scene.add(hanaRight.group);
-// const windowRight = new Tsonh({x: 0, y: 0.5, z: 0.1});
-// hanaRight.group.add(windowRight.group);
+        // --- Хаалга (Haalga) ---
+        const haalga = new Haalga({ a: 3, b: 2, x: 21, y: 0.75, z: 15 });
+        haalga.group.position.set(21, 1, 15); // y = 1 (өндөр/2)
+        haalga.group.rotation.y = Math.PI; // урд зүг рүү харсан
+        scene.add(haalga.group);
 
-const tree1 = new Mod();
-tree1.group.position.set(-19.5, 0, 13.5);
-scene.add(tree1.group);
+        // Хаалган дээр дарах үйлдэл
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        window.addEventListener("click", (event) => {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-const tree2 = new Mod();
-tree2.group.position.set(-19.5, 0, 10.5);
-scene.add(tree2.group);
+            raycaster.setFromCamera(mouse, camera);
+            // хаалганы бүх хэсэгт (doorGroup орсон) шалгах
+            const intersects = raycaster.intersectObject(haalga.group, true);
 
-const tree3 = new Mod();
-tree3.group.position.set(-19.5, 0, 7.5);
-scene.add(tree3.group);
+            if (intersects.length > 0) {
+                haalga.toggle();
+            }
+        });
 
-const tree4 = new Mod();
-tree4.group.position.set(-19.5, 0, 4.5);
-scene.add(tree4.group);
+        // --- Модод (Mod) ---
+        const treePositions = [
+            [-19.5, 1, 13.5], [-19.5, 1, 10.5], [-19.5, 1, 7.5], [-19.5, 1, 4.5], [-19.5, 1, 1.5],
+            [-19.5, 1, -1.5], [-19.5, 1, -4.5], [-19.5, 1, -7.5], [-19.5, 1, -10.5], [-19.5, 1, -13.5]
+        ];
+        treePositions.forEach(pos => {
+            const tree = new Mod();
+            tree.group.position.set(pos[0], pos[1], pos[2]);
+            // сүүдэр тохируулах (модны иш болон навчинд)
+            tree.group.traverse(obj => {
+                if (obj.isMesh) {
+                    obj.castShadow = true;
+                    obj.receiveShadow = true;
+                }
+            });
+            scene.add(tree.group);
+        });
 
-const tree5 = new Mod();
-tree5.group.position.set(-19.5, 0, 1.5);
-scene.add(tree5.group);
+        // --- Байшингийн суурь (таны кодноос) ---
+        const floorGeometry = new THREE.BoxGeometry(10, 0.2, 13);
+        const floorMaterial = new THREE.MeshStandardMaterial({ color: 0xA0522D });
+        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+        floor.position.set(0, 0.1, 0);
+        floor.receiveShadow = true;
+        floor.castShadow = true;
+        scene.add(floor);
 
-const tree6 = new Mod();
-tree6.group.position.set(-19.5, 0, -1.5);
-scene.add(tree6.group);
+        // --- Байшингийн хана, цонх (таны кодонд байсан ч коммент) ---
+        // Жижиг харуул болгон энгийн хайрцаг нэмье (заавал биш)
+        const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xDEB887 });
+        const wallBack = new THREE.Mesh(new THREE.BoxGeometry(10, 4, 0.3), wallMaterial);
+        wallBack.position.set(0, 2, -6.4);
+        wallBack.castShadow = true;
+        wallBack.receiveShadow = true;
+        scene.add(wallBack);
+        
+        const wallFront = new THREE.Mesh(new THREE.BoxGeometry(10, 4, 0.3), wallMaterial);
+        wallFront.position.set(0, 2, 6.4);
+        wallFront.castShadow = true;
+        wallFront.receiveShadow = true;
+        scene.add(wallFront);
+        
+        const wallLeft = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4, 13), wallMaterial);
+        wallLeft.position.set(-5, 2, 0);
+        wallLeft.castShadow = true;
+        wallLeft.receiveShadow = true;
+        scene.add(wallLeft);
+        
+        const wallRight = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4, 13), wallMaterial);
+        wallRight.position.set(5, 2, 0);
+        wallRight.castShadow = true;
+        wallRight.receiveShadow = true;
+        scene.add(wallRight);
+        
+        // Дээвэр
+        const roofMat = new THREE.MeshStandardMaterial({ color: 0x8B3A3A });
+        const roof1 = new THREE.Mesh(new THREE.ConeGeometry(6, 2, 4), roofMat);
+        roof1.position.set(0, 5, 0);
+        roof1.rotation.y = Math.PI/4;
+        roof1.castShadow = true;
+        roof1.receiveShadow = true;
+        scene.add(roof1);
 
-const tree7 = new Mod();
-tree7.group.position.set(-19.5, 0, -4.5);
-scene.add(tree7.group);
+        // Цонх нэмэх (Tsonh класс ашиглахгүйгээр энгийн)
+        const glassMat = new THREE.MeshStandardMaterial({ color: 0x87CEEB, emissive: 0x112233, transparent: true, opacity: 0.7 });
+        const glass1 = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 0.1), glassMat);
+        glass1.position.set(2.5, 2.2, 6.35);
+        scene.add(glass1);
+        const glass2 = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 0.1), glassMat);
+        glass2.position.set(-2.5, 2.2, 6.35);
+        scene.add(glass2);
 
-const tree8 = new Mod();
-tree8.group.position.set(-19.5, 0, -7.5);
-scene.add(tree8.group);
+        // --- Бусад чимэглэл (зааварчилгаа) ---
+        // Хашааны шонгуудыг сүүдэртэй болгох
+        scene.traverse(obj => {
+            if (obj.isMesh && obj.material && obj.material.color.getHex() !== 0x2E7D32) {
+                obj.castShadow = true;
+                obj.receiveShadow = true;
+            }
+        });
 
-const tree9 = new Mod();
-tree9.group.position.set(-19.5, 0, -10.5);
-scene.add(tree9.group);
+        // --- Анимейшн ---
+        function animate() {
+            controls.update(); // damping ажиллах
+            renderer.render(scene, camera);
+        }
+        renderer.setAnimationLoop(animate);
 
-const tree10 = new Mod();
-tree10.group.position.set(-19.5, 0, -13.5);
-scene.add(tree10.group);
-//baishingiin suuri
-const floorGeometry = new THREE.BoxGeometry(10, 0.1, 13);
-const floorMaterial = new THREE.MeshBasicMaterial({color: 0xA0522D });
-const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-floor.position.set(0,0,0);
-scene.add(floor);
-
-camera.position.z = 20;
-controls.update();
-function animate() {
-    controls.update();
-   renderer.render( scene, camera );
-
-}
-
-</script>
+        // --- Цонхны хэмжээ өөрчлөгдөхөд ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
 </body>
 </html>
-
-
-
-
-
