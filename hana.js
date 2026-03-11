@@ -1,3 +1,9 @@
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/"
+  }
+}
 import * as THREE from "three";
 import { CSG } from "three-csg-ts";
 export default class Hana {
@@ -42,4 +48,5 @@ export default class Hana {
         const resultMesh = CSG.toMesh(resultCSG, wall.matrix, wall.material);
         this.group.add(resultMesh);
     }
+
 }
