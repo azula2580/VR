@@ -21,7 +21,6 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import Hais from './hais';
 import Haalga from './haalga';
-import Hana from './hana';
 import Mod from './tree';
 import Tsonh from './tsonh';
 
@@ -97,31 +96,31 @@ window.addEventListener("click", (event) => {
     }
 
 });
-// Арын хана
-const hanaBack = new Hana({x: 0, y: 2, z: -6.5, urgun: 10, undur: 4});
-scene.add(hanaBack.group);
-const windowBack = new Tsonh({x: 0, y: 0.5, z: 0.1});
-hanaBack.group.add(windowBack.group);
+// // Арын хана
+// const hanaBack = new Hana({x: 0, y: 2, z: -6.5, urgun: 10, undur: 4});
+// scene.add(hanaBack.group);
+// const windowBack = new Tsonh({x: 0, y: 0.5, z: 0.1});
+// hanaBack.group.add(windowBack.group);
 
-// Урд хана 
-const hanaFront = new Hana({x: 0, y: 2, z: 6.5, urgun: 10, undur: 4});
-scene.add(hanaFront.group);
-const windowFront = new Tsonh({x: 0, y: 0.5, z: 0.1});
-hanaFront.group.add(windowFront.group);
+// // Урд хана 
+// const hanaFront = new Hana({x: 0, y: 2, z: 6.5, urgun: 10, undur: 4});
+// scene.add(hanaFront.group);
+// const windowFront = new Tsonh({x: 0, y: 0.5, z: 0.1});
+// hanaFront.group.add(windowFront.group);
 
-// Зүүн хана
-const hanaLeft = new Hana({x: -5, y: 2, z: 0, urgun: 13, undur: 4}); 
-hanaLeft.Rotate(Math.PI / 2);
-scene.add(hanaLeft.group);
-const windowLeft = new Tsonh({x: 0, y: 0.5, z: 0.1});
-hanaLeft.group.add(windowLeft.group);
+// // Зүүн хана
+// const hanaLeft = new Hana({x: -5, y: 2, z: 0, urgun: 13, undur: 4}); 
+// hanaLeft.Rotate(Math.PI / 2);
+// scene.add(hanaLeft.group);
+// const windowLeft = new Tsonh({x: 0, y: 0.5, z: 0.1});
+// hanaLeft.group.add(windowLeft.group);
 
-// Баруун хана
-const hanaRight = new Hana({x: 5, y: 2, z: 0, urgun: 13, undur: 4});
-hanaRight.Rotate(Math.PI / 2);
-scene.add(hanaRight.group);
-const windowRight = new Tsonh({x: 0, y: 0.5, z: 0.1});
-hanaRight.group.add(windowRight.group);
+// // Баруун хана
+// const hanaRight = new Hana({x: 5, y: 2, z: 0, urgun: 13, undur: 4});
+// hanaRight.Rotate(Math.PI / 2);
+// scene.add(hanaRight.group);
+// const windowRight = new Tsonh({x: 0, y: 0.5, z: 0.1});
+// hanaRight.group.add(windowRight.group);
 
 const tree1 = new Mod();
 tree1.group.position.set(-19.5, 0, 13.5);
@@ -180,6 +179,7 @@ function animate() {
 </script>
 </body>
 </html>
+
 
 
 
