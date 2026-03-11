@@ -1,3 +1,9 @@
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/"
+  }
+}
 import * as THREE from "three";
 export default class Mod {
   constructor({
@@ -38,4 +44,5 @@ export default class Mod {
       this.group.add(leaves);
     }
   }
+
 }
